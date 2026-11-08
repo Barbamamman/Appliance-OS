@@ -1,0 +1,16 @@
+[Unit]
+Description=HomeAppliance OS – konfiguration vid första start
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+ConditionPathExists=!/var/lib/applianceos/first-boot.done
+
+[Service]
+Type=oneshot
+ExecStart=/opt/applianceos/first-boot.sh
+RemainAfterExit=yes
+TimeoutStartSec=1800
+StandardOutput=journal+console
+
+[Install]
+WantedBy=multi-user.target
