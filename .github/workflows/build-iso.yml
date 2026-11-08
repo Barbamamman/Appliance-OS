@@ -1,0 +1,51 @@
+name: Bygg ISO
+
+on:
+  workflow_dispatch:        # manuell start via knapp på GitHub
+  push:
+    tags: ["v*"]            # bygger även vid taggar, t.ex. v0.1.0
+
+permissions:
+  contents: write           # krävs för att skapa release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # Debian-container så att trixie-nycklar och verktyg finns
+    container:
+      image: debian:trixie
+      options: --privileged
+
+    steps:
+      - name: Installera verktyg
+        run: |
+          apt-get update
+          apt-get install -y live-build git ca-certificates curl sudo
+
+      - name: Hämta koden
+        uses: actions/checkout@v4
+
+      - name: Bygg ISO
+        env:
+          VERSION: ${{ github.ref_type == 'tag' && github.ref_name || '0.0.0-dev' }}
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/build-iso.sh
+
+      - name: Ladda upp ISO som artefakt
+        uses: actions/upload-artifact@v4
+        with:
+          name: iso
+          path: |
+            work/*.iso
+            work/*.sha256
+          retention-days: 14
+
+      - name: Skapa release (endast vid tagg)
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            work/*.iso
+            work/*.sha256
